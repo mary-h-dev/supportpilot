@@ -1,0 +1,8 @@
+.env
+__pycache__/
+.venv/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+eval/reports/*.md
+.qodo/
