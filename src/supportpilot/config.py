@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
     llm_judge_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    # Optional price per 1M tokens (USD) for the cost estimate. 0 for ':free' models.
+    llm_price_in_per_m: float = 0.0
+    llm_price_out_per_m: float = 0.0
+    agent_min_confidence: float = 0.6
+    agent_retrieval_k: int = 5
     embedding_provider: str = "ollama"
     embedding_model: str = "bge-m3"
     embedding_dim: int = 1024

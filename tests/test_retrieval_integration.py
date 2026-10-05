@@ -75,3 +75,38 @@ async def test_reingest_is_idempotent(session):
     await ingest_document(session, FakeEmbedder(), *parse_article(f, root))
     n = (await session.execute(text("SELECT count(*) FROM kb_documents"))).scalar_one()
     assert n == len(list(root.glob("*/*.md")))
+
+
+async def test_agent_graph_over_real_db_search(session):
+    """Graph + DbKBSearch + real Postgres, scripted LLM: wiring check for step 3."""
+    from contextlib import asynccontextmanager
+
+    from fakes import CLS, FakeLLM
+
+    from supportpilot.agent.graph import AgentDeps, build_graph, run_agent
+    from supportpilot.agent.search import DbKBSearch
+
+    @asynccontextmanager
+    async def factory():
+        yield session
+
+    def draft(user):
+        import re
+
+        first_id = re.search(r'<passage id="([^"]+)"', user).group(1)
+        return {
+            "answerable": True,
+            "reply_text": "ok",
+            "cited_source_ids": [first_id],
+            "confidence": 0.9,
+        }
+
+    llm = FakeLLM(
+        classify=CLS, draft=draft, self_check={"supported": True, "answers_question": True}
+    )
+    graph = build_graph(
+        AgentDeps(llm=llm, search=DbKBSearch(factory, FakeEmbedder()), model="fake")
+    )
+    state = await run_agent(graph, {"subject": "refund", "body": "I want a refund"})
+    assert state["outcome"] == "draft_ready"
+    assert state["draft"]["sources"][0]["source_id"].startswith("en/refund-policy.md")

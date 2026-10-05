@@ -5,6 +5,8 @@ import structlog
 
 def setup_logging() -> None:
     logging.basicConfig(format="%(message)s", level=logging.INFO)
+    for noisy in ("httpx", "httpcore", "openai"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
