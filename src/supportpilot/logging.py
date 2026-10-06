@@ -1,10 +1,13 @@
 import logging
+import sys
 
 import structlog
 
 
-def setup_logging() -> None:
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
+def setup_logging(stream=None) -> None:
+    """JSON logs. MCP stdio servers MUST pass stream=sys.stderr: stdout is the protocol channel."""
+    stream = stream or sys.stdout
+    logging.basicConfig(format="%(message)s", level=logging.INFO, stream=sys.stderr)
     for noisy in ("httpx", "httpcore", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     structlog.configure(
@@ -15,6 +18,7 @@ def setup_logging() -> None:
             structlog.processors.JSONRenderer(ensure_ascii=False),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        logger_factory=structlog.WriteLoggerFactory(file=stream),
     )
 
 

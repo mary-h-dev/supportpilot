@@ -22,3 +22,13 @@ class DbKBSearch:
     async def __call__(self, query: str, k: int) -> list[dict]:
         async with self.session_factory() as session:
             return [asdict(p) for p in await hybrid_search(session, self.embedder, query, k=k)]
+
+
+class MCPKBSearch:
+    """Same KBSearch protocol, but retrieval goes through the MCP server's search_kb tool."""
+
+    def __init__(self, client):
+        self.client = client
+
+    async def __call__(self, query: str, k: int) -> list[dict]:
+        return (await self.client.call("search_kb", {"query": query, "k": k}))["passages"]

@@ -4,34 +4,19 @@ Uses a deterministic fake embedder (hashed bag of words) so no Ollama is needed:
 it verifies the SQL/plumbing (ingest, FTS, vector, RRF), not embedding quality.
 """
 
-import hashlib
 import os
 from pathlib import Path
 
 import pytest
+from fakes import FakeEmbedder
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from supportpilot.kb.ingest import ingest_document, parse_article
-from supportpilot.kb.normalize import query_terms
 from supportpilot.kb.retrieval import hybrid_search
 
 URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL not set")
-
-
-class FakeEmbedder:
-    dim = 1024
-
-    async def embed(self, texts):
-        out = []
-        for t in texts:
-            v = [0.0] * self.dim
-            for tok in query_terms(t):
-                v[int(hashlib.md5(tok.encode()).hexdigest(), 16) % self.dim] += 1.0
-            norm = sum(x * x for x in v) ** 0.5 or 1.0
-            out.append([x / norm for x in v])
-        return out
 
 
 @pytest.fixture

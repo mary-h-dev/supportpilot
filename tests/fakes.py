@@ -1,3 +1,6 @@
+import hashlib
+
+from supportpilot.kb.normalize import query_terms
 from supportpilot.llm import Usage
 
 
@@ -62,3 +65,19 @@ GOOD_DRAFT = {
     "confidence": 0.9,
 }
 GOOD_CHECK = {"supported": True, "answers_question": True, "unsupported_claims": []}
+
+
+class FakeEmbedder:
+    """Deterministic hashed bag-of-words embedding: tests plumbing, not semantic quality."""
+
+    dim = 1024
+
+    async def embed(self, texts):
+        out = []
+        for t in texts:
+            v = [0.0] * self.dim
+            for tok in query_terms(t):
+                v[int(hashlib.md5(tok.encode()).hexdigest(), 16) % self.dim] += 1.0
+            norm = sum(x * x for x in v) ** 0.5 or 1.0
+            out.append([x / norm for x in v])
+        return out
