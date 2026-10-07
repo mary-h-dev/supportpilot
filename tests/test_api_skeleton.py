@@ -20,7 +20,8 @@ def test_health_ok():
     app.dependency_overrides[get_session] = fake_session
     try:
         r = TestClient(app).get("/health")
-        assert r.status_code == 200 and r.json() == {"status": "ok"}
+        assert r.status_code == 200
+        assert r.json() == {"status": "ok", "agent": "unavailable"}
     finally:
         app.dependency_overrides.clear()
 

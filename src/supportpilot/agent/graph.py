@@ -9,9 +9,11 @@ import time
 from dataclasses import dataclass
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import interrupt
 
 from ..llm import LLM, LLMError, Usage
 from ..logging import log
+from ..mcp_client import ToolCallError
 from .checks import evaluate_draft
 from .prompts import CHECK_SYSTEM, CLASSIFY_SYSTEM, DRAFT_SYSTEM, passages_block
 from .schemas import AgentState, Classification, DraftOutput, FaithfulnessCheck
@@ -26,6 +28,9 @@ class AgentDeps:
     model: str
     min_confidence: float = 0.6
     k: int = 5
+    # Persistence tail (save_draft -> human interrupt -> send). Leave None to stop at self_check.
+    tools: object | None = None  # triage-role MCP client (save_draft)
+    sender: object | None = None  # sender-role MCP client (send_reply)
 
 
 def _metric(step: str, t0: float, usage: Usage | None = None) -> dict:
@@ -152,6 +157,59 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "metrics": [m],
         }
 
+    async def save_draft(state: AgentState) -> dict:
+        t0 = time.perf_counter()
+        d = state["draft"]
+        try:
+            res = await deps.tools.call(
+                "save_draft",
+                {
+                    "ticket_id": state["ticket"]["id"],
+                    "text": d["text"],
+                    "sources": [s["source_id"] for s in d["sources"]],
+                    "confidence": d["confidence"],
+                },
+            )
+        except ToolCallError as e:
+            log.warning("save_draft_failed", error=str(e))
+            return _human(
+                "save_draft_failed", _metric("save_draft", t0), discarded_draft=d, draft=None
+            )
+        return {"draft_id": res["draft_id"], "metrics": [_metric("save_draft", t0)]}
+
+    async def await_human(state: AgentState) -> dict:
+        # Pauses the graph (state is checkpointed in Postgres) until POST /decision resumes it.
+        # Keep this node tiny: on resume LangGraph re-runs it from the top.
+        decision = interrupt(
+            {
+                "ticket_id": state["ticket"]["id"],
+                "draft_id": state["draft_id"],
+                "draft": state["draft"],
+                "flags": state.get("flags", []),
+                "classification": state.get("classification"),
+            }
+        )
+        return {"decision": decision}
+
+    async def finalize(state: AgentState) -> dict:
+        t0 = time.perf_counter()
+        if state["decision"]["decision"] == "reject":
+            return {
+                "outcome": "rejected",
+                "reason": "human_rejected",
+                "metrics": [_metric("finalize", t0)],
+            }
+        # Not caught on purpose: if sending fails the node fails, the checkpoint stays just
+        # before it, and re-posting the same decision retries from here (see service.decide).
+        res = await deps.sender.call(
+            "send_reply", {"ticket_id": state["ticket"]["id"], "draft_id": state["draft_id"]}
+        )
+        return {
+            "outcome": "sent",
+            "message_id": res["message_id"],
+            "metrics": [_metric("finalize", t0)],
+        }
+
     def stop_if_human(next_node: str):
         return lambda state: END if state.get("outcome") == "needs_human" else next_node
 
@@ -167,7 +225,16 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     g.add_conditional_edges("classify", stop_if_human("retrieve"), ["retrieve", END])
     g.add_conditional_edges("retrieve", stop_if_human("draft"), ["draft", END])
     g.add_conditional_edges("draft", stop_if_human("self_check"), ["self_check", END])
-    g.add_edge("self_check", END)
+    if deps.tools is not None and deps.sender is not None:
+        g.add_node("save_draft", save_draft)
+        g.add_node("await_human", await_human)
+        g.add_node("finalize", finalize)
+        g.add_conditional_edges("self_check", stop_if_human("save_draft"), ["save_draft", END])
+        g.add_conditional_edges("save_draft", stop_if_human("await_human"), ["await_human", END])
+        g.add_edge("await_human", "finalize")
+        g.add_edge("finalize", END)
+    else:
+        g.add_edge("self_check", END)
     return g.compile(checkpointer=checkpointer)
 
 

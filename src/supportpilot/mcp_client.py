@@ -15,6 +15,7 @@ from mcp.client.stdio import stdio_client
 
 TRIAGE_TOOLS = frozenset({"search_kb", "get_ticket", "save_draft"})
 SENDER_TOOLS = frozenset({"send_reply"})
+ALL_TOOLS = TRIAGE_TOOLS | SENDER_TOOLS | {"list_tickets"}
 
 # The tool server gets only what it needs. In particular it never sees LLM_API_KEY.
 _SERVER_ENV_KEYS = (
@@ -41,6 +42,10 @@ class ToolCallError(Exception):
 class MCPToolClient:
     def __init__(self, session: ClientSession, allowed: frozenset[str]):
         self.session, self.allowed = session, allowed
+
+    def restricted(self, allowed: frozenset[str]) -> "MCPToolClient":
+        """A view over the SAME connection with a narrower allowlist (never wider)."""
+        return MCPToolClient(self.session, self.allowed & allowed)
 
     async def call(self, name: str, args: dict) -> dict:
         if name not in self.allowed:

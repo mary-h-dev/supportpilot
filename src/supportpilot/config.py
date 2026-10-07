@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     llm_price_out_per_m: float = 0.0
     agent_min_confidence: float = 0.6
     agent_retrieval_k: int = 5
+    # Shared API key for /tickets*. Empty = auth disabled (local dev only).
+    api_key: str = ""
     embedding_provider: str = "ollama"
     embedding_model: str = "bge-m3"
     embedding_dim: int = 1024

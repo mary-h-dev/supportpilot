@@ -35,6 +35,9 @@ class AgentState(TypedDict, total=False):
     discarded_draft: dict | None  # rejected draft, kept for audit/eval; NEVER shown as a draft
     check: dict | None
     flags: list[str]  # e.g. "possible_prompt_injection"
-    outcome: Literal["draft_ready", "needs_human"]
+    outcome: Literal["draft_ready", "needs_human", "sent", "rejected"]
+    draft_id: str  # id of the draft saved through the MCP save_draft tool
+    decision: dict  # the human decision that resumed the graph
+    message_id: str  # (mock) id of the sent reply
     reason: str  # why we routed to needs_human ("" when draft_ready)
     metrics: Annotated[list[dict], operator.add]  # per-step latency/tokens/cost

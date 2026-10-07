@@ -81,3 +81,46 @@ class FakeEmbedder:
             norm = sum(x * x for x in v) ** 0.5 or 1.0
             out.append([x / norm for x in v])
         return out
+
+
+class InProcessTools:
+    """Same call(name,args) interface as MCPToolClient, but calls tools.py in-process.
+    Applies the same allowlist, so role restrictions are exercised in fast tests too."""
+
+    def __init__(self, ctx, allowed):
+        self.ctx, self.allowed = ctx, allowed
+
+    async def call(self, name, args):
+        from supportpilot import tools
+        from supportpilot.mcp_client import ToolCallError, ToolNotAllowed
+
+        if name not in self.allowed:
+            raise ToolNotAllowed(name)
+        try:
+            if name == "save_draft":
+                return await tools.save_draft(
+                    self.ctx, args["ticket_id"], args["text"], args["sources"], args["confidence"]
+                )
+            if name == "send_reply":
+                return await tools.send_reply(self.ctx, args["ticket_id"], args["draft_id"])
+            if name == "search_kb":
+                return await tools.search_kb(self.ctx, args["query"], args.get("k", 5))
+            if name == "get_ticket":
+                return await tools.get_ticket(self.ctx, args["id"])
+        except tools.ToolRefused as e:
+            raise ToolCallError(str(e)) from None
+        raise AssertionError(f"unmapped tool {name}")
+
+
+class FlakySender(InProcessTools):
+    """send_reply fails `fail_times` times (simulates an email-provider outage)."""
+
+    def __init__(self, ctx, allowed, fail_times=1):
+        super().__init__(ctx, allowed)
+        self.fail_times = fail_times
+
+    async def call(self, name, args):
+        if name == "send_reply" and self.fail_times > 0:
+            self.fail_times -= 1
+            raise RuntimeError("smtp down")
+        return await super().call(name, args)
