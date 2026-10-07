@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-eval/reports/*.md
 .qodo/
+# eval: commit the dataset and the reports; the LLM response cache stays local
+eval/.cache/

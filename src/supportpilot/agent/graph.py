@@ -33,6 +33,11 @@ class AgentDeps:
     sender: object | None = None  # sender-role MCP client (send_reply)
 
 
+def build_query(subject: str, body: str) -> str:
+    """The retrieval query. Shared with the evaluation so both measure the same thing."""
+    return f"{subject}\n{body}"[:1000]
+
+
 def _metric(step: str, t0: float, usage: Usage | None = None) -> dict:
     m = {"step": step, "latency_ms": round((time.perf_counter() - t0) * 1000, 1)}
     if usage:
@@ -75,7 +80,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     async def retrieve(state: AgentState) -> dict:
         t0 = time.perf_counter()
         t = state["ticket"]
-        query = f"{t['subject']}\n{t['body']}"[:1000]
+        query = build_query(t["subject"], t["body"])
         try:
             passages = await deps.search(query, deps.k)
         except Exception:

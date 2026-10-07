@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: supportpilot
+          POSTGRES_PASSWORD: supportpilot
+          POSTGRES_DB: supportpilot
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U supportpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      UV_PYTHON: "3.11"
+      DATABASE_URL: postgresql+asyncpg://supportpilot:supportpilot@localhost:5432/supportpilot
+      TEST_DATABASE_URL: postgresql+asyncpg://supportpilot:supportpilot@localhost:5432/supportpilot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+      # No Ollama and no LLM key in CI: tests use a deterministic fake embedder and a
+      # scripted LLM, so they are free, fast and repeatable. Real-model quality is measured
+      # by `make eval`, not by CI.
+      - name: Test
+        run: uv run pytest -q

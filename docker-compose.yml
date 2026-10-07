@@ -18,5 +18,9 @@ services:
     depends_on:
       db: { condition: service_healthy }
     extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      # Edit the dataset / KB and read reports on the host without rebuilding the image.
+      - ./eval:/app/eval
+      - ./kb:/app/kb
 volumes:
   pgdata:

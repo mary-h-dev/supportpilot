@@ -68,7 +68,9 @@ class OpenAICompatLLM:
                 raise LLMError("LLM_API_KEY is empty. Set it in .env (never in code).")
             from openai import AsyncOpenAI
 
-            client = AsyncOpenAI(base_url=cfg.llm_base_url, api_key=cfg.llm_api_key, timeout=60)
+            client = AsyncOpenAI(
+                base_url=cfg.llm_base_url, api_key=cfg.llm_api_key, timeout=60, max_retries=4
+            )
         self.client = client
 
     def _cost(self, pt: int, ct: int) -> float:
