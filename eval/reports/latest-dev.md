@@ -36,7 +36,10 @@ Tickets: 20 (0 pipeline errors). Intervals are Wilson 95% and are wide at this s
 | Classification: urgency accuracy | 65.0%  (95% CI 43–82%) | 20 |
 | Classification: language accuracy | 95.0%  (95% CI 76–99%) | 20 |
 | MRR (retrieval) | 0.946 | 14 |
-| Human-edit rate | _pending: fill `human_decision` in the review CSV_ | – |
+| Human: approved as-is | 100.0%  (95% CI 77–100%) | 13 |
+| Human: edited | 0.0%  (95% CI 0–23%) | 13 |
+| Human: rejected | 0.0%  (95% CI 0–23%) | 13 |
+| **Human-edit rate** (edited / accepted) | 0.0%  (95% CI 0–23%) | 13 |
 
 ## By language
 
@@ -57,6 +60,11 @@ Tickets: 20 (0 pipeline errors). Intervals are Wilson 95% and are wide at this s
 
 - Median top-1 vector similarity: answerable **0.700** vs unanswerable **0.477**. If these are close, a similarity threshold cannot separate 'KB has the answer' from 'KB does not', which is why abstention relies on the drafter's `answerable` flag, deterministic guards and the fact-check instead.
 - Routed to a human, by reason: {'llm_error': 1, 'kb_has_no_answer': 6}
+
+## Human review
+
+- Reviewed drafts: 13.
+- Spot check of the judge: 0 drafts labelled by hand; human says faithful n/a; judge agrees with the human on n/a.
 
 ## Error analysis (auto-generated)
 
