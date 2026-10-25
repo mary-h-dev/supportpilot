@@ -1,5 +1,6 @@
 """The evaluation harness itself is code: test it (no LLM, no DB needed)."""
 
+import json
 import re
 from argparse import Namespace
 from pathlib import Path
@@ -13,7 +14,7 @@ from supportpilot.agent.graph import build_query
 from supportpilot.eval import __main__ as cli
 from supportpilot.eval import report
 from supportpilot.eval.cache import CachingLLM
-from supportpilot.eval.dataset import EvalTicket, check_against_kb, load_tickets
+from supportpilot.eval.dataset import EvalTicket, check_against_kb, leaks_into, load_tickets
 from supportpilot.eval.metrics import (
     doc_slug,
     hit_at_k,
@@ -52,7 +53,7 @@ def test_percentile():
 # ----------------------------------------------------------------- dataset integrity
 def test_dataset_shape_and_split_discipline():
     dev, test = [t for t in ALL if t.split == "dev"], [t for t in ALL if t.split == "test"]
-    assert len(ALL) == 32 and len(dev) == 20 and len(test) == 12
+    assert len(ALL) == 34 and len(dev) == 21 and len(test) == 13
     assert {t.id for t in dev}.isdisjoint({t.id for t in test})
     key = lambda t: (t.subject.strip().lower(), t.body.strip().lower())  # noqa: E731
     assert {key(t) for t in dev}.isdisjoint({key(t) for t in test})  # no leakage across splits
@@ -90,11 +91,19 @@ def test_answerable_needs_gold_and_unanswerable_must_not_have_it():
 def test_test_split_text_never_appears_in_prompts():
     """Contamination check (necessary, not sufficient): no held-out ticket text was pasted into
     a prompt as an example. Tuning on test numbers cannot be detected by code; see eval README."""
-    prompt_src = Path(prompts.__file__).read_text(encoding="utf-8").lower()
+    prompt_src = Path(prompts.__file__).read_text(encoding="utf-8")
     for t in (t for t in ALL if t.split == "test"):
-        assert t.subject.lower() not in prompt_src and t.body.lower() not in prompt_src, t.id
-        for f in t.forbidden:
-            assert f.lower() not in prompt_src
+        assert not leaks_into(prompt_src, t), f"{t.id} appears in a prompt"
+
+
+def test_contamination_check_catches_pasted_examples_but_not_topic_words():
+    t7 = next(t for t in ALL if t.id == "t07")
+    assert not leaks_into("billing: payments, charges, invoices, prices", t7)  # topic word only
+    pasted = "Example: Where can I download last month's invoice as a PDF? -> billing"
+    assert leaks_into(pasted, t7)
+    assert leaks_into("...ends with " + "HACKED-4242", next(t for t in ALL if t.id == "t08"))
+    short = next(t for t in ALL if t.id == "t11")  # body shorter than the window
+    assert leaks_into("e.g. " + short.body, short) and not leaks_into("student", short)
 
 
 # ----------------------------------------------------------------- CLI guard rails
@@ -123,6 +132,28 @@ async def test_cache_hits_on_identical_call_and_misses_on_change(tmp_path):
     assert (c.hits, c.misses) == (1, 2) and len(inner.calls) == 2
 
 
+async def test_cache_key_changes_with_the_provider_pin_but_not_without_one(tmp_path):
+    from pydantic import BaseModel
+
+    class Out(BaseModel):
+        x: int
+
+    inner = FakeLLM(step={"x": 1})
+    args = dict(step="step", model="m", system="s", user="u", schema=Out)
+    a, b = CachingLLM(inner, tmp_path), CachingLLM(inner, tmp_path, salt="DeepInfra")
+    await a.complete_json(**args)
+    await a.complete_json(**args)
+    await b.complete_json(**args)  # pinned provider: must NOT reuse the unpinned answer
+    assert (a.hits, a.misses, b.hits, b.misses) == (1, 1, 0, 1)
+    # no salt -> the key format is unchanged, so caches written before this feature stay valid
+    legacy = (
+        __import__("hashlib")
+        .sha256(__import__("json").dumps(["m", "s", "u", "Out"], ensure_ascii=False).encode())
+        .hexdigest()
+    )
+    assert (tmp_path / f"{legacy}.json").exists()
+
+
 # ----------------------------------------------------------------- pipeline with an oracle
 BY_SUBJECT = {t.subject: t for t in ALL}
 
@@ -136,12 +167,15 @@ def ticket_of(user: str) -> EvalTicket:
 class OracleSearch:
     """Perfect retriever: gold article first (an unrelated one for unanswerable tickets)."""
 
-    def __init__(self):
+    def __init__(self, distractor_first=False):
         self.by_q = {build_query(t.subject, t.body): t for t in ALL}
+        self.distractor_first = distractor_first
 
     async def __call__(self, query, k):
         t = self.by_q[query]
         slugs = t.gold_docs or ["invoices"]
+        if self.distractor_first and t.answerable:
+            slugs = ["free-trial", *slugs]  # a plausible-but-wrong article ranked above the gold
         sim = 0.7 if t.answerable else 0.5
         return [
             {
@@ -240,7 +274,7 @@ async def test_broken_retrieval_shows_up_as_misses_and_false_abstentions():
     res = await evaluate(dev, Empty(), oracle_llm(), CFG)
     s = report.summarize(res)
     assert s["hit@5"]["value"] == 0.0 and s["false_abstention"]["value"] == 1.0
-    assert s["reasons"] == {"no_kb_match": 20}
+    assert s["reasons"] == {"no_kb_match": 21}
     assert "### Retrieval misses" in report.render_report(res, {"split": "dev"})
 
 
@@ -248,7 +282,7 @@ async def test_review_csv_roundtrip_and_human_edit_rate():
     dev = [t for t in ALL if t.split == "dev"]
     res = await evaluate(dev, OracleSearch(), oracle_llm(), CFG)
     rows = report.review_rows(res)
-    assert len(rows) == 14  # one per drafted answer; abstentions are not reviewed
+    assert len(rows) == 15  # one per drafted answer; abstentions are not reviewed
     parsed = report.parse_reviews(report.reviews_to_csv(rows))
     assert any("پشیمون" in r["body"] for r in parsed)  # Persian survives the CSV round trip
     decisions = ["approve"] * 6 + ["edit"] * 3 + ["reject"]
@@ -263,7 +297,6 @@ async def test_review_csv_roundtrip_and_human_edit_rate():
 
 async def test_report_survives_a_json_round_trip():
     """`eval report` re-reads the saved JSON (int dict keys become strings): regression test."""
-    import json
 
     dev = [t for t in ALL if t.split == "dev"]
     res = await evaluate(dev, OracleSearch(), oracle_llm(), CFG)
@@ -272,3 +305,159 @@ async def test_report_survives_a_json_round_trip():
     assert report.render_report(reloaded, {"split": "dev"}) == report.render_report(
         res, {"split": "dev"}
     )
+
+
+async def test_judge_failure_is_unscored_not_missed():
+    """A draft the judge could not score must not be counted as missing every fact."""
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(), oracle_llm(), CFG)
+    before = report.summarize(res)
+    victim = next(r for r in res if r["class"] == "answered")
+    victim["judge"] = {"failed": "TimeoutError"}
+    after = report.summarize(res)
+    n_facts = len(victim["gold"]["facts"])
+    assert after["unscored_answerable"] == 1
+    assert after["fact_recall_end_to_end"]["n"] == before["fact_recall_end_to_end"]["n"] - n_facts
+    assert after["fact_recall_end_to_end"]["value"] == 1.0  # not dragged down by the failure
+    assert after["judge_failed"] == 1
+
+
+async def test_false_abstention_still_counts_as_missed_facts():
+    class OnlyDevOne:
+        """Empty retrieval for one answerable ticket -> abstains -> its facts are missed."""
+
+        def __init__(self):
+            self.inner = OracleSearch()
+
+        async def __call__(self, q, k):
+            t = self.inner.by_q[q]
+            return [] if t.id == "d01" else await self.inner(q, k)
+
+    dev = [t for t in ALL if t.split == "dev"]
+    s = report.summarize(await evaluate(dev, OnlyDevOne(), oracle_llm(), CFG))
+    assert s["false_abstention"]["k"] == 1
+    assert s["fact_recall_end_to_end"]["value"] < 1.0
+    assert s["fact_recall_answered"]["value"] == 1.0
+
+
+async def test_high_urgency_recall_and_precision():
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(), oracle_llm(), CFG)
+    s = report.summarize(res)
+    assert (s["urgency_high_recall"]["k"], s["urgency_high_recall"]["n"]) == (2, 2)  # d04, d08
+    assert (s["urgency_high_precision"]["k"], s["urgency_high_precision"]["n"]) == (2, 2)
+    for r in res:  # a missed escalation and a false alarm
+        if r["id"] == "d04":
+            r["agent"]["classification"]["urgency"] = "normal"
+        if r["id"] == "d05":
+            r["agent"]["classification"]["urgency"] = "high"
+    s = report.summarize(res)
+    assert s["urgency_high_recall"]["value"] == 0.5
+    assert s["urgency_high_precision"]["value"] == pytest.approx(1 / 2)
+
+
+async def test_rank_table_lists_gold_found_but_not_first():
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(distractor_first=True), oracle_llm(), CFG)
+    s = report.summarize(res)
+    assert s["hit@1"]["value"] == 0.0 and s["hit@3"]["value"] == 1.0
+    md = report.render_report(res, {"split": "dev"})
+    assert "### Retrieval: gold article found but NOT ranked first (15)" in md
+
+
+async def test_llm_error_detail_reaches_the_report():
+    from supportpilot.llm import LLMError
+
+    llm = oracle_llm()
+    llm.by_step["self_check"] = LLMError("RateLimitError: 429 slow down")
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(), llm, CFG)
+    r = next(r for r in res if r["class"] == "false_abstention")
+    assert r["agent"]["reason"] == "llm_error" and "429 slow down" in r["agent"]["error"]
+    assert "429 slow down" in report.render_report(res, {"split": "dev"})
+
+
+async def test_retrieval_infrastructure_errors_are_excluded_not_counted_as_misses():
+    """If Ollama is down for a ticket, that says nothing about retrieval quality."""
+
+    class DownForD01:
+        def __init__(self):
+            self.inner = OracleSearch()
+
+        async def __call__(self, q, k):
+            if self.inner.by_q[q].id == "d01":
+                raise ConnectionError("ollama refused connection")
+            return await self.inner(q, k)
+
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, DownForD01(), oracle_llm(), CFG)
+    s = report.summarize(res)
+    assert s["n_retrieval_infra_errors"] == 1
+    assert s["hit@1"]["n"] == 14 and s["hit@1"]["value"] == 1.0  # d01 not counted as a miss
+    assert s["false_abstention"]["n"] == 14 and s["false_abstention"]["k"] == 0
+    md = report.render_report(res, {"split": "dev"})
+    assert "This run is not clean" in md and "EXCLUDED from all metrics" in md
+    assert "### Retrieval infrastructure errors (excluded from all metrics) (1)" in md
+    assert "ollama refused connection" in md
+    assert "### Retrieval: gold article found but NOT ranked first (0)" in md  # d01 not listed
+
+
+async def test_clean_run_has_no_warning_banner():
+    dev = [t for t in ALL if t.split == "dev"]
+    md = report.render_report(
+        await evaluate(dev, OracleSearch(), oracle_llm(), CFG), {"split": "dev"}
+    )
+    assert "not clean" not in md
+
+
+async def test_preflight_fails_fast_with_the_real_cause():
+    from supportpilot.eval.runner import PreflightError, preflight
+
+    class Down:
+        async def __call__(self, q, k):
+            raise ConnectionError("Connection refused")
+
+    with pytest.raises(PreflightError, match=r"(?s)ConnectionError: Connection refused.*Ollama"):
+        await preflight(Down())
+    await preflight(_AlwaysOk())  # a healthy backend passes silently
+
+
+class _AlwaysOk:
+    async def __call__(self, q, k):
+        return []
+
+
+async def test_rank_table_shows_vector_and_fulltext_evidence_for_the_gold_passage():
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(distractor_first=True), oracle_llm(), CFG)
+    md = report.render_report(res, {"split": "dev"})
+    assert "gold passage evidence" in md and "top-1 passage evidence" in md
+    assert "en/free-trial.md#0 (vec=0.70, fts=0.10)" in md  # the wrong article ranked first
+    assert "en/refund-policy.md#0 (vec=0.70, fts=0.10)" in md  # ...and where the gold one stood
+
+
+async def test_rank_table_tolerates_result_files_without_evidence():
+    """Result files written before the evidence columns existed must still render."""
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(distractor_first=True), oracle_llm(), CFG)
+    for r in res:
+        r["retrieval"].pop("passages", None)
+    assert "n/a" in report.render_report(res, {"split": "dev"})
+
+
+async def test_latency_is_flagged_when_calls_came_from_the_cache():
+    dev = [t for t in ALL if t.split == "dev"]
+    res = await evaluate(dev, OracleSearch(), oracle_llm(), CFG)
+    cached = report.render_report(res, {"split": "dev", "llm_calls_from_cache": "56/72"})
+    fresh = report.render_report(res, {"split": "dev", "llm_calls_from_cache": "0/72"})
+    assert "NOT representative: 78% of LLM calls came from the cache" in cached
+    assert "NOT representative" not in fresh
+
+
+def test_classifier_prompt_keeps_the_v1_urgency_wording():
+    """v2's longer urgency rubric measured no better (3 tickets worse, none better): the
+    classifier uses the short wording again. Guard against silently re-adding it."""
+    cls = prompts.CLASSIFY_SYSTEM
+    assert "low for general questions; otherwise normal" in cls
+    assert "informational question with no problem to solve" not in cls
+    assert "payment methods" in cls and prompts.PROMPT_VERSION == "v3"

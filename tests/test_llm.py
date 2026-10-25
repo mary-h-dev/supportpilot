@@ -11,7 +11,7 @@ class Out(BaseModel):
     x: int
 
 
-def fake_client(*contents, usage=(100, 50)):
+def fake_client(*contents, usage=(100, 50), finish_reason="stop"):
     calls = []
     seq = list(contents)
 
@@ -19,7 +19,7 @@ def fake_client(*contents, usage=(100, 50)):
         calls.append(kw)
         msg = SimpleNamespace(content=seq.pop(0))
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=msg)],
+            choices=[SimpleNamespace(message=msg, finish_reason=finish_reason)],
             usage=SimpleNamespace(prompt_tokens=usage[0], completion_tokens=usage[1]),
         )
 
@@ -62,3 +62,38 @@ async def test_gives_up_after_one_retry():
 def test_missing_api_key_fails_loudly():
     with pytest.raises(LLMError, match="LLM_API_KEY"):
         OpenAICompatLLM(Settings(llm_api_key=""))
+
+
+async def test_truncated_response_fails_fast_with_actionable_message():
+    client, calls = fake_client('{"x": ', finish_reason="length")
+    with pytest.raises(LLMOutputError, match="LLM_MAX_TOKENS"):
+        await OpenAICompatLLM(Settings(llm_api_key="k"), client).complete_json(
+            step="t", model="m", system="s", user="u", schema=Out
+        )
+    assert len(calls) == 1  # no pointless retry: it would truncate again
+
+
+async def test_max_tokens_comes_from_settings():
+    client, calls = fake_client('{"x": 1}')
+    cfg = Settings(llm_api_key="k", llm_max_tokens=777)
+    await OpenAICompatLLM(cfg, client).complete_json(
+        step="t", model="m", system="s", user="u", schema=Out
+    )
+    assert calls[0]["max_tokens"] == 777
+
+
+async def test_provider_pin_is_sent_to_openrouter_only_when_configured():
+    client, calls = fake_client('{"x": 1}', '{"x": 2}')
+    plain = Settings(llm_api_key="k")
+    await OpenAICompatLLM(plain, client).complete_json(
+        step="t", model="m", system="s", user="u", schema=Out
+    )
+    assert "extra_body" not in calls[0]  # default routing untouched
+
+    pinned = Settings(llm_api_key="k", llm_provider_order="DeepInfra, Novita")
+    await OpenAICompatLLM(pinned, client).complete_json(
+        step="t", model="m", system="s", user="u", schema=Out
+    )
+    assert calls[1]["extra_body"] == {
+        "provider": {"order": ["DeepInfra", "Novita"], "allow_fallbacks": False}
+    }

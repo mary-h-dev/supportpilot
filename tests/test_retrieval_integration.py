@@ -80,11 +80,14 @@ async def test_agent_graph_over_real_db_search(session):
     def draft(user):
         import re
 
-        first_id = re.search(r'<passage id="([^"]+)"', user).group(1)
+        # Cite the refund article if retrieval put it in the prompt (rank among the top 3 is
+        # decided by a tie under the fake embedder, so do not depend on it being first).
+        match = re.search(r'<passage id="(en/refund-policy[^"]*)"', user)
+        cited = match.group(1) if match else re.search(r'<passage id="([^"]+)"', user).group(1)
         return {
             "answerable": True,
             "reply_text": "ok",
-            "cited_source_ids": [first_id],
+            "cited_source_ids": [cited],
             "confidence": 0.9,
         }
 

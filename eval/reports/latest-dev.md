@@ -3,68 +3,71 @@
 | Run | |
 |---|---|
 | split | dev |
-| timestamp_utc | 20261007-121937 |
+| timestamp_utc | 20261022-112240 |
 | git_commit | unknown (no git in this environment) |
 | generator_model | openai/gpt-oss-20b |
-| judge_model | openai/gpt-oss-20b |
+| judge_model | qwen/qwen3.7-flash |
 | embedding_model | bge-m3 |
 | retrieval_k | 5 |
 | min_confidence | 0.6 |
-| prompt_version | v1 |
-| prompts_sha | d60844793d |
-| dataset_sha | 89c5d7d762 |
-| llm_calls_from_cache | 0/67 |
+| prompt_version | v3 |
+| prompts_sha | ce78e01118 |
+| dataset_sha | 88eade9fc7 |
+| llm_calls_from_cache | 50/72 |
 
-Tickets: 20 (0 pipeline errors). Intervals are Wilson 95% and are wide at this sample size: treat differences of a few points as noise.
+Tickets: 21 (0 pipeline errors). Intervals are Wilson 95% and are wide at this sample size: treat differences of a few points as noise.
 
 ## Summary
 
 | Metric | Result | n |
 |---|---|---|
-| Retrieval hit@1 | 92.9%  (95% CI 69–99%) | 14 |
-| Retrieval hit@3 | 92.9%  (95% CI 69–99%) | 14 |
-| Retrieval hit@5 | 100.0%  (95% CI 78–100%) | 14 |
+| Retrieval hit@1 | 93.3%  (95% CI 70–99%) | 15 |
+| Retrieval hit@3 | 93.3%  (95% CI 70–99%) | 15 |
+| Retrieval hit@5 | 100.0%  (95% CI 80–100%) | 15 |
 | Correct abstention (KB has no answer → human) | 100.0%  (95% CI 61–100%) | 6 |
-| False abstention (KB has the answer, still → human) | 7.1%  (95% CI 1–31%) | 14 |
-| Answer coverage (answerable tickets that got a draft) | 92.9%  (95% CI 69–99%) | 14 |
-| Faithfulness (drafts fully supported, LLM judge) | 100.0%  (95% CI 76–100%) | 12 |
-| Claim-level support (LLM judge) | 100.0%  (95% CI 93–100%) | 51 |
-| Fact recall, among drafted answers | 95.5%  (95% CI 78–99%) | 22 |
-| Fact recall, end-to-end (abstaining = 0) | 80.8%  (95% CI 62–91%) | 26 |
+| False abstention (KB has the answer, still → human) | 0.0%  (95% CI 0–20%) | 15 |
+| Answer coverage (answerable tickets that got a draft) | 100.0%  (95% CI 80–100%) | 15 |
+| Faithfulness (drafts fully supported, LLM judge) | 100.0%  (95% CI 80–100%) | 15 |
+| Claim-level support (LLM judge) | 100.0%  (95% CI 95–100%) | 75 |
+| Fact recall, among drafted answers | 100.0%  (95% CI 88–100%) | 28 |
+| Fact recall, end-to-end (abstaining = 0) | 100.0%  (95% CI 88–100%) | 28 |
 | Injection resistance (no forbidden text in final draft) | 100.0%  (95% CI 44–100%) | 3 |
-| Classification: category accuracy | 85.0%  (95% CI 64–95%) | 20 |
-| Classification: urgency accuracy | 65.0%  (95% CI 43–82%) | 20 |
-| Classification: language accuracy | 95.0%  (95% CI 76–99%) | 20 |
-| MRR (retrieval) | 0.946 | 14 |
-| Human: approved as-is | 100.0%  (95% CI 77–100%) | 13 |
-| Human: edited | 0.0%  (95% CI 0–23%) | 13 |
-| Human: rejected | 0.0%  (95% CI 0–23%) | 13 |
-| **Human-edit rate** (edited / accepted) | 0.0%  (95% CI 0–23%) | 13 |
+| Classification: category accuracy | 95.2%  (95% CI 77–99%) | 21 |
+| Urgency: 'high' recall (escalation; gold-high tickets caught) | 100.0%  (95% CI 34–100%) | 2 |
+| Urgency: 'high' precision (predicted-high that were really high) | 66.7%  (95% CI 21–94%) | 3 |
+| Urgency: 3-level accuracy (low/normal boundary is subjective) | 42.9%  (95% CI 24–63%) | 21 |
+| Classification: language accuracy | 95.2%  (95% CI 77–99%) | 21 |
+| MRR (retrieval) | 0.950 | 15 |
+| Human: approved as-is | 92.9%  (95% CI 69–99%) | 14 |
+| Human: edited | 7.1%  (95% CI 1–31%) | 14 |
+| Human: rejected | 0.0%  (95% CI 0–22%) | 14 |
+| **Human-edit rate** (edited / accepted) | 7.1%  (95% CI 1–31%) | 14 |
 
 ## By language
 
 | lang | answerable | hit@3 | answered | unanswerable | correct abstention |
 |---|---|---|---|---|---|
 | en | 8 | 7 | 8 | 3 | 3 |
-| fa | 5 | 5 | 4 | 3 | 3 |
+| fa | 6 | 6 | 6 | 3 | 3 |
 | mixed | 1 | 1 | 1 | 0 | 0 |
 
 ## Cost and latency
 
-- Agent latency per ticket: p50 15636 ms, p95 27923 ms (excludes judge; retrieval is memoised, so embedding time is not included)
-- Tokens: 40380 in / 9511 out
-- Estimated cost: agent $0.00254 + judge $0.00148 (from `LLM_PRICE_*`; includes calls served from cache at their original price)
-- Judge: 1 failed, 0 drafts had no factual claims (excluded from faithfulness)
+- Agent latency per ticket: p50 2644 ms, p95 5422 ms (excludes judge; retrieval is memoised, so embedding time is not included). **NOT representative: 69% of LLM calls came from the cache.** Re-run with `--no-cache` to measure latency.
+- Tokens: 47343 in / 11659 out
+- Estimated cost: agent $0.00305 + judge $0.00556 (from `LLM_PRICE_*`; includes calls served from cache at their original price)
+- Judge: 0 failed, 0 drafts had no factual claims (excluded from faithfulness); 0 answered tickets are unscored and excluded from fact recall
 
 ## Diagnostics
 
-- Median top-1 vector similarity: answerable **0.700** vs unanswerable **0.477**. If these are close, a similarity threshold cannot separate 'KB has the answer' from 'KB does not', which is why abstention relies on the drafter's `answerable` flag, deterministic guards and the fact-check instead.
-- Routed to a human, by reason: {'llm_error': 1, 'kb_has_no_answer': 6}
+- Median top-1 vector similarity: answerable **0.703** vs unanswerable **0.477**. If these are close, a similarity threshold cannot separate 'KB has the answer' from 'KB does not', which is why abstention relies on the drafter's `answerable` flag, deterministic guards and the fact-check instead.
+- Routed to a human, by reason: {'kb_has_no_answer': 6}. Reasons `llm_error` are reliability failures (see the error detail in the table below), not judgement calls.
+- Injection near-misses (marker only in a *discarded* draft): 0
 
 ## Human review
 
-- Reviewed drafts: 13.
-- Spot check of the judge: 0 drafts labelled by hand; human says faithful n/a; judge agrees with the human on n/a.
+- Reviewed drafts: 14.
+- Spot check of the judge: 15 drafts labelled by hand; human says faithful 100.0%  (95% CI 80–100%); judge agrees with the human on 100.0%  (95% CI 80–100%).
 
 ## Error analysis (auto-generated)
 
@@ -76,11 +79,19 @@ _None._
 
 _None._
 
-### False abstentions (answerable, but routed to a human) (1)
+### Retrieval infrastructure errors (excluded from all metrics) (0)
 
-| id | lang | reason | discarded draft |
-|---|---|---|---|
-| d04 | fa | llm_error | اگر پرداخت شما ناموفق بود، ابتدا مطمئن شوید که موجودی کارت کافی است، کارت منقضی نشده و برای پرداخت اینترنتی و… |
+_None._
+
+### Retrieval: gold article found but NOT ranked first (1)
+
+| id | lang | gold rank | gold passage evidence | top-1 passage evidence |
+|---|---|---|---|---|
+| d01 | en | 4 | en/refund-policy.md#0 (vec=0.61, fts=0.10) | en/cancel-subscription.md#0 (vec=0.56, fts=0.40) |
+
+### False abstentions (answerable, but routed to a human) (0)
+
+_None._
 
 ### Answered although the KB has no answer (0)
 
@@ -90,31 +101,32 @@ _None._
 
 _None._
 
-### Missing gold facts in answered drafts (1)
+### Missing gold facts in answered drafts (0)
 
-| id | missing facts |
-|---|---|
-| d01 | full refund within 14 days of the first payment |
+_None._
 
 ### Injection leaks (0)
 
 _None._
 
-### Classification errors (11)
+### Classification errors (14)
 
 | id | field | gold | predicted |
 |---|---|---|---|
+| d01 | urgency | normal | high |
 | d07 | urgency | low | normal |
 | d09 | urgency | low | normal |
-| d11 | language | mixed | fa |
+| d10 | urgency | low | normal |
 | d13 | urgency | low | normal |
-| d14 | category | technical | other |
-| d15 | category | billing | other |
+| d14 | urgency | low | normal |
+| d15 | urgency | low | normal |
 | d16 | urgency | low | normal |
 | d17 | category | other | technical |
 | d17 | urgency | low | normal |
 | d18 | urgency | low | normal |
 | d19 | urgency | low | normal |
+| d20 | urgency | low | normal |
+| d21 | language | mixed | fa |
 
 ## Author's analysis
 

@@ -1,0 +1,167 @@
+[
+ {
+  "id": "c1",
+  "docs": [
+   "en/refund-policy",
+   "en/cancel-subscription"
+  ],
+  "draft": "You can request a full refund if it is within 14 days of your first payment. Open Billing > Payment history, choose the charge and click Request refund. Approved refunds reach your original payment method within 5 to 10 business days.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c2",
+  "docs": [
+   "en/two-factor-auth"
+  ],
+  "draft": "If you can't use your phone, sign in with one of the 10 backup codes you received when you enabled two-factor authentication. If you have no backup code, contact support: after identity verification, two-factor authentication is reset within 2 business days.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c3",
+  "docs": [
+   "fa/api-limits"
+  ],
+  "draft": "طرح Starter تا ۶۰ درخواست و طرح Pro تا ۶۰۰ درخواست در دقیقه مجاز است و محدودیت‌ها هر دقیقه بازنشانی می‌شوند. در صورت عبور از سقف، خطای HTTP 429 همراه با هدر Retry-After دریافت می‌کنید. برای سقف بالاتر با تیم فروش دربارهٔ طرح Enterprise صحبت کنید.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c4",
+  "docs": [
+   "en/storage-limits"
+  ],
+  "draft": "Starter includes 5 GB and Pro includes 100 GB. When you reach 100%, new uploads are blocked but your existing files stay available. You can add 50 GB for $4 per month in Billing > Add-ons, or delete files to free space.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c5",
+  "docs": [
+   "en/change-email"
+  ],
+  "draft": "Go to Settings > Profile > Email and enter the new address. We send a confirmation link to both the old and the new address, valid for 24 hours. This does not change where invoices go: the billing email is set separately in Billing > Billing details.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c6",
+  "docs": [
+   "fa/free-trial"
+  ],
+  "draft": "هر شرکت جدید یک دورهٔ آزمایشی رایگان ۱۴ روزه از طرح Pro دریافت می‌کند و نیازی به کارت بانکی نیست. پس از پایان دوره، اگر روش پرداخت اضافه نکنید حساب به‌طور خودکار به Starter منتقل می‌شود.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "c7",
+  "docs": [
+   "en/invoices"
+  ],
+  "draft": "Thanks for getting in touch! Every successful payment generates an invoice as a PDF, which you can download from Billing > Invoices. We're happy to help with anything else you need.",
+  "expect_faithful": true,
+  "error_type": ""
+ },
+ {
+  "id": "p1",
+  "docs": [
+   "en/refund-policy"
+  ],
+  "draft": "You can request a full refund within 30 days of your first payment. Open Billing > Payment history, choose the charge and click Request refund.",
+  "expect_faithful": false,
+  "error_type": "wrong_number"
+ },
+ {
+  "id": "p2",
+  "docs": [
+   "en/password-reset"
+  ],
+  "draft": "Click Forgot password on the login page and enter your account email. The reset link is valid for 24 hours.",
+  "expect_faithful": false,
+  "error_type": "wrong_number"
+ },
+ {
+  "id": "p3",
+  "docs": [
+   "en/cancel-subscription",
+   "en/refund-policy"
+  ],
+  "draft": "Go to Settings > Subscription and click Cancel plan. We will automatically refund the unused part of the current month.",
+  "expect_faithful": false,
+  "error_type": "invented_policy"
+ },
+ {
+  "id": "p4",
+  "docs": [
+   "en/two-factor-auth"
+  ],
+  "draft": "Enable it in Settings > Account > Two-factor. Scan the QR code with an authenticator app such as Google Authenticator or Authy.",
+  "expect_faithful": false,
+  "error_type": "wrong_path"
+ },
+ {
+  "id": "p5",
+  "docs": [
+   "en/delete-account"
+  ],
+  "draft": "Deleting your account is immediate and cannot be undone.",
+  "expect_faithful": false,
+  "error_type": "contradiction"
+ },
+ {
+  "id": "p6",
+  "docs": [
+   "en/team-members"
+  ],
+  "draft": "The Pro plan includes 10 seats and each extra seat costs $5 per month. Extra seats are billed annually.",
+  "expect_faithful": false,
+  "error_type": "extra_claim"
+ },
+ {
+  "id": "p7",
+  "docs": [
+   "en/api-limits"
+  ],
+  "draft": "Starter allows 600 requests per minute and Pro allows 60 requests per minute.",
+  "expect_faithful": false,
+  "error_type": "swapped_values"
+ },
+ {
+  "id": "p8",
+  "docs": [
+   "en/failed-payment",
+   "en/refund-policy"
+  ],
+  "draft": "If money left your account but the payment failed, we will refund it within 24 hours.",
+  "expect_faithful": false,
+  "error_type": "invented_promise"
+ },
+ {
+  "id": "p9",
+  "docs": [
+   "fa/export-data"
+  ],
+  "draft": "ظرف ۱۵ دقیقه یک پیوند دانلود برایتان ایمیل می‌شود و این پیوند ۷ روز اعتبار دارد.",
+  "expect_faithful": false,
+  "error_type": "wrong_number"
+ },
+ {
+  "id": "p10",
+  "docs": [
+   "fa/invoices"
+  ],
+  "draft": "فاکتورهای صادرشده را می‌توانید خودتان از بخش صورتحساب ویرایش کنید.",
+  "expect_faithful": false,
+  "error_type": "contradiction"
+ },
+ {
+  "id": "p11",
+  "docs": [
+   "en/storage-limits"
+  ],
+  "draft": "Starter includes 5 GB and Pro includes 100 GB. The Enterprise plan has unlimited storage.",
+  "expect_faithful": false,
+  "error_type": "invented_plan"
+ }
+]

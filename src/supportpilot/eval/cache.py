@@ -9,8 +9,11 @@ from ..llm import Usage
 
 
 class CachingLLM:
-    def __init__(self, inner, directory: Path = Path("eval/.cache"), enabled: bool = True):
-        self.inner, self.dir, self.enabled = inner, Path(directory), enabled
+    def __init__(
+        self, inner, directory: Path = Path("eval/.cache"), enabled: bool = True, salt: str = ""
+    ):
+        # `salt` = anything outside the prompt that changes answers (e.g. a pinned provider).
+        self.inner, self.dir, self.enabled, self.salt = inner, Path(directory), enabled, salt
         self.hits = self.misses = 0
         if enabled:
             self.dir.mkdir(parents=True, exist_ok=True)
@@ -22,7 +25,10 @@ class CachingLLM:
                 step=step, model=model, system=system, user=user, schema=schema
             )
         key = hashlib.sha256(
-            json.dumps([model, system, user, schema.__name__], ensure_ascii=False).encode()
+            json.dumps(
+                [model, system, user, schema.__name__, *([self.salt] if self.salt else [])],
+                ensure_ascii=False,
+            ).encode()
         ).hexdigest()
         path = self.dir / f"{key}.json"
         if path.exists():

@@ -36,6 +36,7 @@ ignore = ["B008"]  # FastAPI Depends() in defaults is idiomatic
 # report text/table templates read better unwrapped
 "src/supportpilot/eval/report.py" = ["E501"]
 "src/supportpilot/eval/__main__.py" = ["E501"]
+"src/supportpilot/eval/judge_check.py" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -77,11 +77,26 @@ class OpenAICompatLLM:
         c = self.cfg
         return (pt * c.llm_price_in_per_m + ct * c.llm_price_out_per_m) / 1_000_000
 
+    def _routing(self) -> dict:
+        """OpenRouter `provider` preferences (documented request-body field). Omitted unless set."""
+        order = [p.strip() for p in self.cfg.llm_provider_order.split(",") if p.strip()]
+        if not order:
+            return {}
+        return {
+            "extra_body": {
+                "provider": {"order": order, "allow_fallbacks": self.cfg.llm_allow_fallbacks}
+            }
+        }
+
     async def _call(self, step: str, model: str, messages: list[dict]) -> tuple[str, Usage]:
         t0 = time.perf_counter()
         try:
             resp = await self.client.chat.completions.create(
-                model=model, messages=messages, temperature=0, max_tokens=900
+                model=model,
+                messages=messages,
+                temperature=0,
+                max_tokens=self.cfg.llm_max_tokens,
+                **self._routing(),
             )
         except Exception as e:  # network, 401, 429 ...
             raise LLMError(f"{type(e).__name__}: {e}") from e
@@ -96,7 +111,21 @@ class OpenAICompatLLM:
             cost_usd=self._cost(pt, ct),
         )
         log.info("llm_call", step=step, **usage.model_dump())
-        if not resp.choices or not resp.choices[0].message.content:
+        choice = resp.choices[0] if resp.choices else None
+        if choice is not None and getattr(choice, "finish_reason", None) == "length":
+            # Deterministic failure: retrying with the same limit truncates again.
+            log.warning(
+                "llm_truncated",
+                step=step,
+                model=model,
+                completion_tokens=ct,
+                max_tokens=self.cfg.llm_max_tokens,
+            )
+            raise LLMOutputError(
+                f"{step}: response truncated at max_tokens={self.cfg.llm_max_tokens}; "
+                "raise LLM_MAX_TOKENS (reasoning models spend tokens on hidden thinking)"
+            )
+        if choice is None or not choice.message.content:
             raise LLMError("empty completion")
         return resp.choices[0].message.content, usage
 

@@ -78,6 +78,7 @@ async def test_off_topic_draft_blocked():
 async def test_llm_failure_is_fail_safe(failing):
     s, _ = await run(llm(**{failing: LLMError("boom")}))
     assert (s["outcome"], s["reason"]) == ("needs_human", "llm_error")
+    assert "boom" in s["error"]  # the cause is kept (audit/eval), not just the label
     assert s.get("draft") is None
 
 
@@ -88,6 +89,7 @@ async def test_retrieval_exception_is_fail_safe():
 
     s, _ = await run(llm(), Broken())
     assert (s["outcome"], s["reason"]) == ("needs_human", "retrieval_error")
+    assert "db down" in s["error"] and "RuntimeError" in s["error"]  # the real cause is kept
 
 
 # ---- safety / edge cases (these become the repeatable regression tests) ----

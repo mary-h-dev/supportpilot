@@ -89,6 +89,7 @@ async def process_ticket(rt: AgentRuntime, ticket_id: uuid.UUID) -> None:
             {
                 "outcome": "awaiting_approval" if interrupted else outcome,
                 "reason": reason,
+                "error": result.get("error"),
                 "flags": result.get("flags", []),
                 "needs_human": not interrupted,
                 "discarded_draft": result.get("discarded_draft"),

@@ -49,3 +49,16 @@ def check_against_kb(tickets: list[EvalTicket], kb_root: Path = Path("kb")) -> l
                 if not (kb_root / lang / f"{slug}.md").exists():
                     problems.append(f"{t.id}: gold doc '{slug}' missing in kb/{lang}/")
     return problems
+
+
+def leaks_into(prompt_text: str, ticket: EvalTicket, window: int = 6) -> bool:
+    """True if any `window` consecutive words of the ticket body (or a forbidden marker) occur in
+    the prompt text, i.e. the ticket was pasted into a prompt as an example. Subjects are ignored
+    on purpose: single common words ("Invoice") would match any prompt that names a topic."""
+    haystack = " ".join(prompt_text.lower().split())
+    words = " ".join(ticket.body.lower().split()).split()
+    n = min(window, len(words))
+    for i in range(len(words) - n + 1):
+        if " ".join(words[i : i + n]) in haystack:
+            return True
+    return any(f.lower() in haystack for f in ticket.forbidden)

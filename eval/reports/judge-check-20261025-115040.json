@@ -1,0 +1,119 @@
+{
+ "meta": {
+  "judge_model": "qwen/qwen3.7-flash",
+  "timestamp_utc": "20261025-115040",
+  "provider_pin": "Darkbloom, Alibaba Cloud Int.",
+  "cases_sha": "62a4e991bc",
+  "llm_calls_from_cache": "0/18"
+ },
+ "results": [
+  {
+   "id": "c1",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c2",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c3",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c4",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c5",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c6",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "c7",
+   "error_type": "",
+   "expect_faithful": true,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p1",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p2",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p3",
+   "error_type": "invented_policy",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p4",
+   "error_type": "wrong_path",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p5",
+   "error_type": "contradiction",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p6",
+   "error_type": "extra_claim",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p7",
+   "error_type": "swapped_values",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p8",
+   "error_type": "invented_promise",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p9",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p10",
+   "error_type": "contradiction",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  },
+  {
+   "id": "p11",
+   "error_type": "invented_plan",
+   "expect_faithful": false,
+   "failed": "LLMError: NotFoundError: Error code: 404 - {'error': {'message': 'No endpoints found for qwen/qwen3.7-flash. Every candidate endpoint was removed during routing: Filter by Fallback removed alibaba, alibaba/us-east-1.', 'code': 404, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 2}, {'step': 'Filter by Fallback', 'endpoint_count': 0}], 'failed_routing_step': 'Filter by Fallback'}}, 'user_id': 'user_3HBcmbtMSYgc4bjgYvIEd2EyiP6'}"
+  }
+ ]
+}

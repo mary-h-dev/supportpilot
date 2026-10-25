@@ -52,3 +52,52 @@ def test_embedder_provider_is_config_driven():
     assert isinstance(get_embedder(Settings(embedding_provider="ollama")), OllamaEmbedder)
     with pytest.raises(ValueError):
         get_embedder(Settings(embedding_provider="nope"))
+
+
+def _client(handler):
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+async def _no_sleep(_):
+    return None
+
+
+async def test_ollama_embedder_retries_transient_failures_then_succeeds():
+    attempts = []
+
+    def handler(request):
+        attempts.append(1)
+        if len(attempts) < 3:  # first two calls: Ollama is (re)loading the model
+            return httpx.Response(503, text="model loading")
+        return httpx.Response(200, json={"embeddings": [[0.1] * 4]})
+
+    e = OllamaEmbedder("http://x", "bge-m3", 4, _client(handler), retries=2, sleep=_no_sleep)
+    assert len(await e.embed(["t"])) == 1 and len(attempts) == 3
+
+
+async def test_ollama_embedder_gives_actionable_error_when_it_keeps_failing():
+    from supportpilot.kb.embeddings import EmbeddingError
+
+    def handler(request):
+        raise httpx.ConnectError("connection refused")
+
+    e = OllamaEmbedder(
+        "http://host:11434", "bge-m3", 4, _client(handler), retries=1, sleep=_no_sleep
+    )
+    with pytest.raises(EmbeddingError, match=r"host:11434.*2 attempts.*Is Ollama running"):
+        await e.embed(["t"])
+
+
+async def test_ollama_embedder_does_not_retry_client_errors():
+    from supportpilot.kb.embeddings import EmbeddingError
+
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(404, text="model 'bge-m3' not found")
+
+    e = OllamaEmbedder("http://x", "bge-m3", 4, _client(handler), retries=3, sleep=_no_sleep)
+    with pytest.raises(EmbeddingError, match="not found"):
+        await e.embed(["t"])
+    assert len(calls) == 1  # a wrong request is not fixed by repeating it

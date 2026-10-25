@@ -16,10 +16,10 @@ from pathlib import Path
 
 from ..agent import prompts
 from ..config import settings
-from . import report
+from . import judge_check, report
 from .cache import CachingLLM
 from .dataset import DEFAULT_PATH, check_against_kb, load_tickets
-from .runner import EvalConfig, evaluate
+from .runner import EvalConfig, PreflightError, evaluate, preflight
 
 
 def _sha(path: Path) -> str:
@@ -72,7 +72,12 @@ async def cmd_run(a) -> None:
     from ..logging import setup_logging
 
     setup_logging(level=logging.WARNING)
-    llm = CachingLLM(OpenAICompatLLM(), Path("eval/.cache"), enabled=not a.no_cache)
+    llm = CachingLLM(
+        OpenAICompatLLM(),
+        Path("eval/.cache"),
+        enabled=not a.no_cache,
+        salt=settings.llm_provider_order,
+    )
     cfg = EvalConfig(
         model=settings.llm_model,
         judge_model=settings.llm_judge_model,
@@ -93,7 +98,12 @@ async def cmd_run(a) -> None:
     print(
         f"Running {len(tickets)} {a.split} tickets with {cfg.model} (judge: {cfg.judge_model})..."
     )
-    results = await evaluate(tickets, DbKBSearch(SessionLocal, get_embedder()), llm, cfg)
+    search = DbKBSearch(SessionLocal, get_embedder())
+    try:
+        await preflight(search)
+    except PreflightError as e:
+        sys.exit(str(e))
+    results = await evaluate(tickets, search, llm, cfg)
 
     ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     meta = {
@@ -108,6 +118,8 @@ async def cmd_run(a) -> None:
         "prompt_version": prompts.PROMPT_VERSION,
         "prompts_sha": _sha(Path(prompts.__file__)),
         "dataset_sha": _sha(DEFAULT_PATH),
+        "provider_pin": settings.llm_provider_order
+        or "none (OpenRouter load-balances across providers)",
         "llm_calls_from_cache": f"{llm.hits}/{llm.hits + llm.misses}",
     }
     if test_run_number:
@@ -144,6 +156,43 @@ async def cmd_run(a) -> None:
     )
 
 
+async def cmd_judge_check(a) -> None:
+    """No database and no Ollama needed: only the judge model."""
+    from ..llm import OpenAICompatLLM
+    from ..logging import setup_logging
+
+    setup_logging(level=logging.WARNING)
+    cases = judge_check.load_cases()
+    llm = CachingLLM(
+        OpenAICompatLLM(),
+        Path("eval/.cache"),
+        enabled=not a.no_cache,
+        salt=settings.llm_provider_order,
+    )
+    print(f"Checking judge {settings.llm_judge_model} on {len(cases)} hand-written cases...")
+    results = await judge_check.run_check(
+        cases, llm, settings.llm_judge_model, concurrency=a.concurrency
+    )
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    meta = {
+        "judge_model": settings.llm_judge_model,
+        "timestamp_utc": ts,
+        "provider_pin": settings.llm_provider_order or "none (OpenRouter load-balances)",
+        "cases_sha": _sha(judge_check.DEFAULT_PATH),
+        "llm_calls_from_cache": f"{llm.hits}/{llm.hits + llm.misses}",
+    }
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    md = judge_check.render_report(results, meta)
+    (out / f"judge-check-{ts}.md").write_text(md, encoding="utf-8")
+    (out / f"judge-check-{ts}.json").write_text(
+        json.dumps({"meta": meta, "results": results}, ensure_ascii=False, indent=1),
+        encoding="utf-8",
+    )
+    print(md.split("## Per case")[0])
+    print(f"Wrote {out}/judge-check-{ts}.md")
+
+
 def cmd_report(a) -> None:
     blob = json.loads(Path(a.results).read_text(encoding="utf-8"))
     reviews = (
@@ -166,11 +215,20 @@ def main() -> None:
     r.add_argument("--concurrency", type=int, default=2)
     r.add_argument("--no-cache", action="store_true")
     r.add_argument("--out", default="eval/reports")
+    j = sub.add_parser("judge-check", help="can the LLM judge catch deliberately wrong drafts?")
+    j.add_argument("--concurrency", type=int, default=2)
+    j.add_argument("--no-cache", action="store_true")
+    j.add_argument("--out", default="eval/reports")
     g = sub.add_parser("report")
     g.add_argument("results")
     g.add_argument("--reviews")
     a = p.parse_args()
-    asyncio.run(cmd_run(a)) if a.cmd == "run" else cmd_report(a)
+    if a.cmd == "run":
+        asyncio.run(cmd_run(a))
+    elif a.cmd == "judge-check":
+        asyncio.run(cmd_judge_check(a))
+    else:
+        cmd_report(a)
 
 
 if __name__ == "__main__":

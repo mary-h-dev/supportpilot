@@ -72,8 +72,12 @@ async def draft_for(ctx, tid, body="You can request a refund within 14 days."):
 # ---------------------------------------------------------------- read tools
 async def test_search_kb_returns_source_ids(ctx):
     out = await tools.search_kb(ctx, "I want a refund", k=3)
-    assert out["passages"][0]["source_id"].startswith("en/refund-policy.md")
-    assert len(out["passages"]) <= 3
+    ids = [p["source_id"] for p in out["passages"]]
+    # With the bag-of-words FakeEmbedder two articles tie exactly under RRF (one is first only in
+    # the vector list, the other only in the keyword list) and the tie is decided by insertion
+    # order. So assert "found near the top", not "wins a tie". Ranking quality is `make eval`.
+    assert "en/refund-policy.md#0" in ids[:2]
+    assert len(ids) <= 3 and all(i.endswith("#0") for i in ids)  # source ids have the cite format
 
 
 async def test_search_kb_validates_input(ctx):

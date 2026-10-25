@@ -70,7 +70,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             )
         except LLMError as e:
             log.warning("classify_failed", error=str(e))
-            return _human("llm_error", _metric("classify", t0), flags=flags)
+            return _human("llm_error", _metric("classify", t0), flags=flags, error=str(e)[:300])
         return {
             "classification": cls.model_dump(),
             "flags": flags,
@@ -83,9 +83,11 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         query = build_query(t["subject"], t["body"])
         try:
             passages = await deps.search(query, deps.k)
-        except Exception:
+        except Exception as e:
             log.exception("retrieval_failed")
-            return _human("retrieval_error", _metric("retrieve", t0))
+            return _human(
+                "retrieval_error", _metric("retrieve", t0), error=f"{type(e).__name__}: {e}"[:300]
+            )
         m = _metric("retrieve", t0)
         if not passages:
             return _human("no_kb_match", m, passages=[])
@@ -106,7 +108,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             )
         except LLMError as e:
             log.warning("draft_failed", error=str(e))
-            return _human("llm_error", _metric("draft", t0))
+            return _human("llm_error", _metric("draft", t0), error=str(e)[:300])
         return {"draft": out.model_dump(), "metrics": [_metric("draft", t0, usage)]}
 
     async def self_check(state: AgentState) -> dict:
@@ -133,7 +135,11 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         except LLMError as e:
             log.warning("self_check_failed", error=str(e))
             return _human(
-                "llm_error", _metric("self_check", t0), draft=None, discarded_draft=state["draft"]
+                "llm_error",
+                _metric("self_check", t0),
+                draft=None,
+                discarded_draft=state["draft"],
+                error=str(e)[:300],
             )
         m = _metric("self_check", t0, usage)
         if not chk.supported:

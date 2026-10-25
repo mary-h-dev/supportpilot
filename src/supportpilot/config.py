@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     # Optional price per 1M tokens (USD) for the cost estimate. 0 for ':free' models.
     llm_price_in_per_m: float = 0.0
     llm_price_out_per_m: float = 0.0
+    # Reasoning models count their hidden thinking against this limit; too low = truncated JSON.
+    llm_max_tokens: int = 1500
+    # OpenRouter load-balances every request across providers (different quantisation/serving),
+    # so identical prompts can answer differently. Name provider(s) here, comma separated and
+    # spelled exactly as on the model page, to pin them. Empty = OpenRouter's default routing.
+    llm_provider_order: str = ""
+    llm_allow_fallbacks: bool = False  # only used when llm_provider_order is set
     agent_min_confidence: float = 0.6
     agent_retrieval_k: int = 5
     # Shared API key for /tickets*. Empty = auth disabled (local dev only).

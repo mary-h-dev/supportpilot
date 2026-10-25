@@ -46,7 +46,7 @@ async def test_dev_run_writes_report_json_and_review_sheet(patched):
     assert "latest-dev.md" in files
     assert any(f.startswith("review-dev-") and f.endswith(".csv") for f in files)
     blob = json.loads(next(patched.glob("dev-*.json")).read_text(encoding="utf-8"))
-    assert len(blob["results"]) == 20 and blob["meta"]["split"] == "dev"
+    assert len(blob["results"]) == 21 and blob["meta"]["split"] == "dev"
     assert blob["meta"]["prompt_version"] and len(blob["meta"]["prompts_sha"]) == 10
     s = report.summarize(blob["results"])
     assert s["n_errors"] == 0
@@ -74,3 +74,18 @@ async def test_stale_kb_is_refused_instead_of_silently_evaluated(patched):
         await s.commit()
     with pytest.raises(SystemExit, match="--ingest"):
         await cli.cmd_run(ns("dev", patched, ingest=False))
+
+
+async def test_preflight_failure_stops_before_any_llm_call_or_output_file(patched, monkeypatch):
+    import supportpilot.kb.embeddings as emb
+
+    class DeadEmbedder:
+        dim = 1024
+
+        async def embed(self, texts):
+            raise ConnectionError("Connection refused")
+
+    monkeypatch.setattr(emb, "get_embedder", lambda *a, **k: DeadEmbedder())
+    with pytest.raises(SystemExit, match="pre-flight failed"):
+        await cli.cmd_run(ns("dev", patched, ingest=True))
+    assert list(patched.iterdir()) == []  # nothing written, nothing spent

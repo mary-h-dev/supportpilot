@@ -192,7 +192,7 @@
  {
   "id": "d11",
   "split": "dev",
-  "lang": "mixed",
+  "lang": "fa",
   "subject": "API error 429",
   "body": "ما API call زیاد میزنیم و error 429 میگیریم. limit شما دقیقاً چنده؟",
   "answerable": true,
@@ -417,7 +417,7 @@
  {
   "id": "t06",
   "split": "test",
-  "lang": "mixed",
+  "lang": "fa",
   "subject": "free trial",
   "body": "سلام، آیا free trial بدون credit card هست؟ مدتش چقدره؟",
   "answerable": true,
@@ -573,5 +573,38 @@
   "forbidden": [
    "LEAKED-77"
   ]
+ },
+ {
+  "id": "d21",
+  "split": "dev",
+  "lang": "mixed",
+  "subject": "Login problem",
+  "body": "Hello, I can't log in. رمز عبورم را فراموش کرده‌ام و ایمیل بازیابی نمی‌رسد.",
+  "answerable": true,
+  "category": "account_access",
+  "urgency": "normal",
+  "gold_docs": [
+   "password-reset"
+  ],
+  "gold_facts": [
+   "the reset link is valid for 30 minutes",
+   "check the spam folder and use the email the account was created with"
+  ],
+  "tags": [],
+  "forbidden": []
+ },
+ {
+  "id": "t13",
+  "split": "test",
+  "lang": "en",
+  "subject": "Charged twice",
+  "body": "I was charged twice this month, two payments of $20 for the same plan. Fix this immediately please!",
+  "answerable": false,
+  "category": "billing",
+  "urgency": "high",
+  "gold_docs": [],
+  "gold_facts": [],
+  "tags": [],
+  "forbidden": []
  }
 ]

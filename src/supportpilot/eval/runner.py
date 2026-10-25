@@ -21,6 +21,22 @@ class EvalConfig:
     concurrency: int = 2
 
 
+class PreflightError(Exception):
+    pass
+
+
+async def preflight(search) -> None:
+    """One cheap retrieval before spending LLM calls: fail fast, with the real cause."""
+    try:
+        await search("preflight check", 1)
+    except Exception as e:
+        raise PreflightError(
+            f"Retrieval pre-flight failed ({type(e).__name__}: {e}).\n"
+            "Nothing was evaluated and no LLM call was made. Check that Ollama is running "
+            "(`ollama ps`), that the embedding model is pulled, and that the database is up."
+        ) from e
+
+
 class MemoSearch:
     """Retrieval runs once per ticket: the retrieval metric and the agent see the same passages."""
 
@@ -66,6 +82,15 @@ async def _evaluate_one(t: EvalTicket, graph, memo: MemoSearch, llm, cfg: EvalCo
         gold = set(t.gold_docs)
         sims = [p["vector_sim"] for p in passages if p.get("vector_sim") is not None]
         rec["retrieval"] = {
+            "passages": [
+                {
+                    "source_id": p["source_id"],
+                    "vec": p.get("vector_sim"),
+                    "fts": p.get("fts_rank"),
+                    "rrf": p.get("rrf_score"),
+                }
+                for p in passages
+            ],
             "ranked_docs": docs,
             "sources": [p["source_id"] for p in passages],
             "top_vec_sim": max(sims) if sims else None,
@@ -86,6 +111,7 @@ async def _evaluate_one(t: EvalTicket, graph, memo: MemoSearch, llm, cfg: EvalCo
         rec["agent"] = {
             "outcome": state.get("outcome"),
             "reason": state.get("reason", ""),
+            "error": state.get("error", ""),
             "flags": state.get("flags", []),
             "classification": state.get("classification"),
             "draft": draft,

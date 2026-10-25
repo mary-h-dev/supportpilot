@@ -1,0 +1,161 @@
+{
+ "meta": {
+  "judge_model": "qwen/qwen3.7-flash",
+  "timestamp_utc": "20261025-112652",
+  "provider_pin": "none (OpenRouter load-balances)",
+  "cases_sha": "62a4e991bc",
+  "llm_calls_from_cache": "0/18"
+ },
+ "results": [
+  {
+   "id": "c1",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c2",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c3",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c4",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c5",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c6",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "c7",
+   "error_type": "",
+   "expect_faithful": true,
+   "judged_faithful": true,
+   "unsupported": []
+  },
+  {
+   "id": "p1",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "You can request a full refund within 30 days of your first payment."
+   ]
+  },
+  {
+   "id": "p2",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "The reset link is valid for 24 hours."
+   ]
+  },
+  {
+   "id": "p3",
+   "error_type": "invented_policy",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "We will automatically refund the unused part of the current month."
+   ]
+  },
+  {
+   "id": "p4",
+   "error_type": "wrong_path",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "Enable it in Settings &gt; Account &gt; Two-factor."
+   ]
+  },
+  {
+   "id": "p5",
+   "error_type": "contradiction",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "Deleting your account is immediate.",
+    "Deleting your account cannot be undone."
+   ]
+  },
+  {
+   "id": "p6",
+   "error_type": "extra_claim",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "Extra seats are billed annually."
+   ]
+  },
+  {
+   "id": "p7",
+   "error_type": "swapped_values",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "Starter allows 600 requests per minute.",
+    "Pro allows 60 requests per minute."
+   ]
+  },
+  {
+   "id": "p8",
+   "error_type": "invented_promise",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "If money left your account but the payment failed, we will refund it within 24 hours."
+   ]
+  },
+  {
+   "id": "p9",
+   "error_type": "wrong_number",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "The link is valid for 7 days."
+   ]
+  },
+  {
+   "id": "p10",
+   "error_type": "contradiction",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "فاکتورهای صادرشده را می‌توانید خودتان از بخش صورتحساب ویرایش کنید."
+   ]
+  },
+  {
+   "id": "p11",
+   "error_type": "invented_plan",
+   "expect_faithful": false,
+   "judged_faithful": false,
+   "unsupported": [
+    "The Enterprise plan has unlimited storage."
+   ]
+  }
+ ]
+}

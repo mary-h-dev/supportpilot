@@ -39,5 +39,6 @@ class AgentState(TypedDict, total=False):
     draft_id: str  # id of the draft saved through the MCP save_draft tool
     decision: dict  # the human decision that resumed the graph
     message_id: str  # (mock) id of the sent reply
+    error: str  # detail behind reason=llm_error / save_draft_failed (never shown to customers)
     reason: str  # why we routed to needs_human ("" when draft_ready)
     metrics: Annotated[list[dict], operator.add]  # per-step latency/tokens/cost

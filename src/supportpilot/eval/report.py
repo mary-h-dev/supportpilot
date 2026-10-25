@@ -4,7 +4,7 @@ import csv
 import io
 from collections import Counter
 
-from .metrics import median, percentile, proportion
+from .metrics import doc_slug, median, percentile, proportion
 
 REVIEW_COLUMNS = [
     "id",
@@ -31,9 +31,17 @@ def _una(rs):
 
 
 def summarize(results: list[dict]) -> dict:
-    ok = [r for r in results if "agent" in r]  # tickets that ran end to end
+    ran = [r for r in results if "agent" in r]  # tickets that ran end to end
+    # Retrieval infrastructure failures (Ollama down, DB hiccup...) say nothing about retrieval
+    # QUALITY, so those tickets are excluded from every metric and reported separately.
+    ok = [r for r in ran if "retrieval_error" not in r]
     ans, una = _ans(ok), _una(ok)
-    s: dict = {"n_tickets": len(results), "n_errors": len(results) - len(ok)}
+    s: dict = {
+        "n_tickets": len(results),
+        "n_errors": len(results) - len(ran),
+        "n_retrieval_infra_errors": len(ran) - len(ok),
+        "n_llm_errors": sum(1 for r in ok if r["agent"]["reason"] == "llm_error"),
+    }
 
     for k in (1, 3, 5):
         s[f"hit@{k}"] = proportion(sum(r["retrieval"]["hit"][str(k)] for r in ans), len(ans))
@@ -58,13 +66,19 @@ def summarize(results: list[dict]) -> dict:
     answered = [
         r for r in ans if r["class"] == "answered" and r.get("judge") and "failed" not in r["judge"]
     ]
-    total_facts = sum(len(r["gold"]["facts"]) for r in ans)
+    abstained = [r for r in ans if r["class"] == "false_abstention"]
+    scored_ids = {r["id"] for r in answered}
+    # A draft the judge could not score is UNSCORED, not "missed": it must not drag recall down.
+    s["unscored_answerable"] = sum(
+        1 for r in ans if r["class"] == "answered" and r["id"] not in scored_ids
+    )
+    e2e_facts = sum(len(r["gold"]["facts"]) for r in [*answered, *abstained])
     s["fact_recall_answered"] = proportion(
         sum(sum(r["judge"]["facts_covered"]) for r in answered),
         sum(len(r["gold"]["facts"]) for r in answered),
     )
     s["fact_recall_end_to_end"] = proportion(  # abstaining counts as missing every fact
-        sum(sum(r["judge"]["facts_covered"]) for r in answered), total_facts
+        sum(sum(r["judge"]["facts_covered"]) for r in answered), e2e_facts
     )
 
     inj = [r for r in ok if "injection" in r["tags"]]
@@ -77,6 +91,15 @@ def summarize(results: list[dict]) -> dict:
         s[f"cls_{field}"] = proportion(
             sum(r["agent"]["classification"][field] == gold(r) for r in have), len(have)
         )
+
+    # The decision that matters operationally is escalating HIGH urgency. A ticket whose
+    # classification failed counts as "not escalated" (conservative).
+    pred = {r["id"]: (r["agent"]["classification"] or {}).get("urgency") for r in ok}
+    gold_high = [r["id"] for r in ok if r["gold"]["urgency"] == "high"]
+    pred_high = [i for i, u in pred.items() if u == "high"]
+    tp = len(set(gold_high) & set(pred_high))
+    s["urgency_high_recall"] = proportion(tp, len(gold_high))
+    s["urgency_high_precision"] = proportion(tp, len(pred_high))
 
     lat = [r["agent"]["latency_ms"] for r in ok]
     s["latency_p50_ms"], s["latency_p95_ms"] = percentile(lat, 50), percentile(lat, 95)
@@ -185,6 +208,23 @@ def review_stats(rows: list[dict], results: list[dict]) -> dict | None:
 
 
 # ------------------------------------------------------------------ markdown
+def _ev(p: dict | None) -> str:
+    """vector / full-text evidence for one retrieved passage (absent in old result files)."""
+    if not p:
+        return "n/a"
+    vec = "-" if p.get("vec") is None else f"{p['vec']:.2f}"
+    fts = "-" if p.get("fts") is None else f"{p['fts']:.2f}"
+    return f"{p['source_id']} (vec={vec}, fts={fts})"
+
+
+def _cache_fraction(meta: dict) -> float:
+    try:
+        hit, total = str(meta.get("llm_calls_from_cache", "0/0")).split("/")
+        return int(hit) / int(total) if int(total) else 0.0
+    except ValueError:
+        return 0.0
+
+
 def _p(d: dict | None, pct: bool = True) -> str:
     if not d or d["value"] is None:
         return "n/a"
@@ -210,7 +250,12 @@ def summary_table(s: dict, rv: dict | None = None) -> str:
         ("Fact recall, end-to-end (abstaining = 0)", s["fact_recall_end_to_end"]),
         ("Injection resistance (no forbidden text in final draft)", s["injection_resistance"]),
         ("Classification: category accuracy", s["cls_category"]),
-        ("Classification: urgency accuracy", s["cls_urgency"]),
+        ("Urgency: 'high' recall (escalation; gold-high tickets caught)", s["urgency_high_recall"]),
+        (
+            "Urgency: 'high' precision (predicted-high that were really high)",
+            s["urgency_high_precision"],
+        ),
+        ("Urgency: 3-level accuracy (low/normal boundary is subjective)", s["cls_urgency"]),
         ("Classification: language accuracy", s["cls_language"]),
     ]
     out = ["| Metric | Result | n |", "|---|---|---|"]
@@ -234,7 +279,7 @@ def summary_table(s: dict, rv: dict | None = None) -> str:
 
 
 def _errors(results: list[dict]) -> str:
-    ok = [r for r in results if "agent" in r]
+    ok = [r for r in results if "agent" in r and "retrieval_error" not in r]
     sec: list[str] = []
 
     def table(title, header, rows):
@@ -265,14 +310,49 @@ def _errors(results: list[dict]) -> str:
             if not r["retrieval"]["hit"]["5"]
         ],
     )
+
+    def gold_rank(r):
+        docs, gold = r["retrieval"]["ranked_docs"], set(r["gold"]["docs"])
+        return next((i for i, d in enumerate(docs, 1) if d in gold), None)
+
+    table(
+        "Retrieval infrastructure errors (excluded from all metrics)",
+        ["id", "error"],
+        [(r["id"], r["retrieval_error"]) for r in results if "retrieval_error" in r],
+    )
+    table(
+        "Retrieval: gold article found but NOT ranked first",
+        ["id", "lang", "gold rank", "gold passage evidence", "top-1 passage evidence"],
+        [
+            (
+                r["id"],
+                r["lang"],
+                gold_rank(r) or ">5",
+                _ev(
+                    next(
+                        (
+                            p
+                            for p in r["retrieval"].get("passages", [])
+                            if doc_slug(p["source_id"]) in set(r["gold"]["docs"])
+                        ),
+                        None,
+                    )
+                ),
+                _ev((r["retrieval"].get("passages") or [None])[0]),
+            )
+            for r in _ans(ok)
+            if gold_rank(r) != 1
+        ],
+    )
     table(
         "False abstentions (answerable, but routed to a human)",
-        ["id", "lang", "reason", "discarded draft"],
+        ["id", "lang", "reason", "error detail", "discarded draft"],
         [
             (
                 r["id"],
                 r["lang"],
                 r["agent"]["reason"],
+                r["agent"].get("error", ""),
                 (r["agent"]["discarded_draft"] or {}).get("reply_text", ""),
             )
             for r in ok
@@ -359,6 +439,15 @@ def render_report(results: list[dict], meta: dict, reviews: list[dict] | None = 
             f"> ⚠️ **Held-out test split, run #{meta.get('test_run_number', '?')}.** "
             "Prompts and thresholds must be tuned on `dev` only; never change anything because of these numbers.",
         ]
+    if s["n_retrieval_infra_errors"] or s["n_llm_errors"]:
+        L += [
+            "",
+            "> ⚠️ **This run is not clean.** "
+            f"{s['n_retrieval_infra_errors']} ticket(s) hit retrieval infrastructure errors and are "
+            f"EXCLUDED from all metrics; {s['n_llm_errors']} ticket(s) ended in `llm_error` (counted "
+            "as abstentions). Fix the cause and re-run: completed LLM calls are cached, so a re-run "
+            "is cheap. Do not compare this run's numbers with a clean run.",
+        ]
     L += [
         "",
         f"Tickets: {s['n_tickets']} ({s['n_errors']} pipeline errors). "
@@ -380,11 +469,17 @@ def render_report(results: list[dict], meta: dict, reviews: list[dict] | None = 
         "",
         "## Cost and latency",
         "",
-        f"- Agent latency per ticket: p50 {s['latency_p50_ms'] or 0:.0f} ms, p95 {s['latency_p95_ms'] or 0:.0f} ms (excludes judge; retrieval is memoised, so embedding time is not included)",
+        f"- Agent latency per ticket: p50 {s['latency_p50_ms'] or 0:.0f} ms, p95 {s['latency_p95_ms'] or 0:.0f} ms (excludes judge; retrieval is memoised, so embedding time is not included)"
+        + (
+            f". **NOT representative: {_cache_fraction(meta):.0%} of LLM calls came from the cache.** "
+            "Re-run with `--no-cache` to measure latency."
+            if _cache_fraction(meta) > 0
+            else ""
+        ),
         f"- Tokens: {s['tokens_in']} in / {s['tokens_out']} out",
         f"- Estimated cost: agent ${s['agent_cost_usd']:.5f} + judge ${s['judge_cost_usd']:.5f} "
         "(from `LLM_PRICE_*`; includes calls served from cache at their original price)",
-        f"- Judge: {s['judge_failed']} failed, {s['judge_no_claims']} drafts had no factual claims (excluded from faithfulness)",
+        f"- Judge: {s['judge_failed']} failed, {s['judge_no_claims']} drafts had no factual claims (excluded from faithfulness); {s['unscored_answerable']} answered tickets are unscored and excluded from fact recall",
         "",
     ]
     L += [
@@ -394,7 +489,9 @@ def render_report(results: list[dict], meta: dict, reviews: list[dict] | None = 
         f"unanswerable **{s['vec_sim_median']['unanswerable'] or 0:.3f}**. If these are close, a similarity "
         "threshold cannot separate 'KB has the answer' from 'KB does not', which is why abstention relies on "
         "the drafter's `answerable` flag, deterministic guards and the fact-check instead.",
-        f"- Routed to a human, by reason: {s['reasons'] or 'none'}",
+        f"- Routed to a human, by reason: {s['reasons'] or 'none'}. Reasons `llm_error` are "
+        "reliability failures (see the error detail in the table below), not judgement calls.",
+        f"- Injection near-misses (marker only in a *discarded* draft): {s['injection_near_miss']}",
         "",
     ]
     if rv:
